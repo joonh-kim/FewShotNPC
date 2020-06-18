@@ -1,3 +1,12 @@
+checkpoint/
+*.pyc
+*.jpg
+Related_base/
+results/
+.idea/
+.tgz/
+filelists/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
