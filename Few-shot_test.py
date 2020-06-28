@@ -96,6 +96,7 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
+        # save_file = './AF_miniimagenet_450.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':

@@ -46,7 +46,7 @@ class cos_layer(nn.Module):
         super(cos_layer, self).__init__()
         self.centers = nn.Parameter(torch.randn(args.num_class, args.feature_dim).type(torch.cuda.FloatTensor), requires_grad=True)
         # self.epsilon = torch.tensor(NNseparation(args.num_class, args.feature_dim) / 2)
-        self.epsilon = torch.tensor(math.pi / 3)
+        self.epsilon = torch.tensor(args.epsilon)
         self.scale_factor = args.scale_factor
 
     def forward(self, x):
