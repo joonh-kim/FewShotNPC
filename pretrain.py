@@ -11,9 +11,10 @@ def criterion(output1, output2, target, batch_size):
     s2 = Sigma2.apply
     alpha = 1/15
 
-    loss = (target * s1(output1) + alpha * (1 - target) * s2(output2)).sum()
+    loss = (target * s1(output1) + alpha * (1 - target) * s2(output2)).sum(dim=1)
+    loss = loss.sum() / batch_size
 
-    return loss / batch_size
+    return loss
 
 if __name__ == '__main__':
 
@@ -34,24 +35,32 @@ if __name__ == '__main__':
         else:
             num_epochs = 5000
 
-    image_size = 84
+    image_size = 224
 
     base_datamgr = SimpleDataManager(image_size, batch_size=args.base_batch_size)
     base_loader = base_datamgr.get_data_loader(base_file, aug=True)
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.classifier == 'Ours':
         if args.backbone == 'Conv64':
             model = model64()
         elif args.backbone == 'Conv128':
             model = model128()
-        else:
+        elif args.backbone == 'ResNet12':
             model = model12()
+        elif args.backbone == 'ResNet18':
+            model = model18()
+        else:
+            raise NotImplementedError
     elif args.classifier in ['Cosine', 'ArcFace']:
         model = model_cc()
 
     model = model.to(device)
+    if torch.cuda.device_count() > 1:
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+        model = nn.DataParallel(model)
     CE_loss = nn.CrossEntropyLoss()
 
     optimizer = optim.Adam([

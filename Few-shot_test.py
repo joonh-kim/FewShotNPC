@@ -5,6 +5,7 @@ from data.datamgr import SimpleDataManager
 from arguments import parse_args
 from model.model import *
 from utils import parse_feature
+import os
 
 def feature_extract(val_loader, model):
     feats = {}
@@ -82,7 +83,7 @@ if __name__ == '__main__':
         else:
             num_epochs = 5000
 
-    image_size = 84
+    image_size = 224
 
     val_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
     val_loader = val_datamgr.get_data_loader(val_file, aug=False)
@@ -101,11 +102,19 @@ if __name__ == '__main__':
                 model = model64()
             elif args.backbone == 'Conv128':
                 model = model128()
-            else:
+            elif args.backbone == 'ResNet12':
                 model = model12()
+            elif args.backbone == 'ResNet18':
+                model = model18()
+            else:
+                raise NotImplementedError
         elif args.classifier in ['Cosine', 'ArcFace']:
             model = model_cc()
         model = model.to(device)
+        if torch.cuda.device_count() > 1:
+            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+            os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+            model = nn.DataParallel(model)
         model.load_state_dict(torch.load(save_file))
 
         with torch.no_grad():

@@ -10,7 +10,6 @@ args = parse_args()
 
 torch.manual_seed(0)
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 """ pretrain models """
 class cos_softmax(nn.Module):
@@ -47,7 +46,7 @@ class cos_layer(nn.Module):
         super(cos_layer, self).__init__()
         self.centers = nn.Parameter(torch.randn(args.num_class, args.feature_dim).type(torch.cuda.FloatTensor), requires_grad=True)
         # self.epsilon = torch.tensor(NNseparation(args.num_class, args.feature_dim) / 2)
-        self.epsilon = torch.tensor(math.pi / 6)
+        self.epsilon = torch.tensor(math.pi / 3)
         self.scale_factor = args.scale_factor
 
     def forward(self, x):
@@ -85,6 +84,17 @@ class model128(nn.Module):
         output1, output2, centers_normalized = self.classifier(x)
         return output1, output2, x
 
+class model18(nn.Module):
+    def __init__(self):
+        super(model18, self).__init__()
+        self.feature_extractor = ResNet18()
+        self.classifier = cos_layer()
+
+    def forward(self, x):
+        x = self.feature_extractor(x)
+        output1, output2, centers_normalized = self.classifier(x)
+        return output1, output2, x
+
 class model12(nn.Module):
     def __init__(self):
         super(model12, self).__init__()
@@ -95,7 +105,6 @@ class model12(nn.Module):
         x = self.feature_extractor(x)
         output1, output2, centers_normalized = self.classifier(x)
         return output1, output2, x
-
 
 """ adaptation models """
 class adaptation_cos_softmax(nn.Module):
