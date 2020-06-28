@@ -1,6 +1,7 @@
 checkpoint/
 *.pyc
 *.jpg
+*.pth
 Related_base/
 results/
 .idea/

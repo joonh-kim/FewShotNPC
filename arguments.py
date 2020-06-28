@@ -10,11 +10,11 @@ def parse_args():
     parser.add_argument('--backbone', default='ResNet18', help='Conv64/128, ResNet12/18')
     parser.add_argument('--classifier', default='Ours', help='Ours, Cosine, ArcFace')
     parser.add_argument('--scale_factor', type=int, default=30)
-    parser.add_argument('--epsilon', type=float, default=(math.pi / 3))
+    parser.add_argument('--epsilon', type=float, default=(math.pi / 2))
     parser.add_argument('--margin', type=int, default=0.1)
 
     parser.add_argument('--num_epochs', type=int, default=-1)
-    parser.add_argument('--base_batch_size', type=int, default=128)
+    parser.add_argument('--base_batch_size', type=int, default=16)
     parser.add_argument('--val_batch_size', type=int, default=64)
     parser.add_argument('--feature_dim', type=int, default=512, help='3200 for Conv128, 1600 for Conv64, 384 for ResNet12, 512 for ResNet18')
     parser.add_argument('--num_class', type=int, default=64, help='100 for CUB, 64 for miniimagenet')

@@ -59,7 +59,7 @@ if __name__ == '__main__':
     model = model.to(device)
     if torch.cuda.device_count() > 1:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
         model = nn.DataParallel(model)
     CE_loss = nn.CrossEntropyLoss()
 
