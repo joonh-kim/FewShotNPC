@@ -21,13 +21,14 @@ if __name__ == '__main__':
 
         image_size = 224
 
-        base_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
+        base_datamgr = SimpleDataManager(image_size, batch_size=32)
         base_loader = base_datamgr.get_data_loader(base_file, aug=True)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
+        save_file = './miniimagenet_1.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
@@ -43,9 +44,17 @@ if __name__ == '__main__':
         elif args.classifier in ['Cosine', 'ArcFace']:
             model = model_cc()
         model = model.to(device)
+        loaded_params = torch.load(save_file)
+        new_params = model.state_dict().copy()
+        for i in loaded_params:
+            i_parts = i.split('.')
+            if i_parts[0] == 'module':
+                new_params['.'.join(i_parts[1:])] = loaded_params[i]
+            else:
+                new_params[i] = loaded_params[i]
+        model.load_state_dict(new_params)
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(save_file))
 
         correct = 0.0
         with torch.no_grad():

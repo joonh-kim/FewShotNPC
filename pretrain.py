@@ -111,7 +111,15 @@ if __name__ == '__main__':
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
 
-        model.load_state_dict(torch.load(save_file))
+        loaded_params = torch.load(save_file)
+        new_params = model.state_dict().copy()
+        for i in loaded_params:
+            i_parts = i.split('.')
+            if i_parts[0] == 'module':
+                new_params['.'.join(i_parts[1:])] = loaded_params[i]
+            else:
+                new_params[i] = loaded_params[i]
+        model.load_state_dict(new_params)
 
         correct = 0.0
         with torch.no_grad():

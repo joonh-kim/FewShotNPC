@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        # save_file = './Ours_miniimagenet_790_Conv128.pth'
+        # save_file = './CC_miniimagenet_400_Conv128.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
@@ -143,9 +143,17 @@ if __name__ == '__main__':
         elif args.classifier in ['Cosine', 'ArcFace']:
             model = model_cc()
         model = model.to(device)
+        loaded_params = torch.load(save_file)
+        new_params = model.state_dict().copy()
+        for i in loaded_params:
+            i_parts = i.split('.')
+            if i_parts[0] == 'module':
+                new_params['.'.join(i_parts[1:])] = loaded_params[i]
+            else:
+                new_params[i] = loaded_params[i]
+        model.load_state_dict(new_params)
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
-        model.load_state_dict(torch.load(save_file))
 
         with torch.no_grad():
             print('Feature extracting...')
