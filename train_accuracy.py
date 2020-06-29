@@ -9,10 +9,10 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    for j in range(9):
-        # num_model = 50 * (j+1)
+    for j in range(4):
+        num_model = 100 * (j+1)
 
-        num_model = 1  # which checkpoint file?
+        # num_model = 400  # which checkpoint file?
 
         if args.data_set == 'miniimagenet':
             base_file = args.miniimagenet_data_path + '/base.json'
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
         image_size = 224
 
-        base_datamgr = SimpleDataManager(image_size, batch_size=64)
+        base_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
         base_loader = base_datamgr.get_data_loader(base_file, aug=True)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         model = model.to(device)
         if torch.cuda.device_count() > 1:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+            os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
             model = nn.DataParallel(model)
         model.load_state_dict(torch.load(save_file))
 

@@ -6,6 +6,8 @@ from arguments import parse_args
 from model.model import *
 from utils import parse_feature
 import os
+import matplotlib.pyplot as plt
+from sklearn import manifold
 
 def feature_extract(val_loader, model):
     feats = {}
@@ -25,6 +27,36 @@ def feature_extract(val_loader, model):
             print('Batch {:d}/{:d}'.format(i + 1, len(val_loader)))
 
     return feats
+
+def tsne(feats, n):
+    color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
+                  5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'chartreuse', 9: 'forestgreen',
+                  10: 'aquamarine', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
+                  15: 'teal', 16: 'navy', 17: 'indigo', 18: 'crimson', 19: 'black'}
+
+    feats_np = np.zeros((20, n, 3200))
+    class_list = feats.keys()
+    for cl in class_list:
+        for i in range(n):
+            feats_np[cl - 80][i] = feats[cl][i]
+    X = feats_np.reshape(20 * n, 3200)
+    y = np.repeat(range(20), n)
+
+    print(X.shape)
+    print(y.shape)
+    print("Working on T-SNE visualization...")
+    tsne = manifold.TSNE(n_components=2, init='pca', random_state=0, perplexity=50, verbose=1, n_iter=1500)
+
+    xx = []
+    for i in range(0, len(X)):
+        xx.append((X[i] - np.min(X)) / (np.max(X) - np.min(X)))
+    X = xx
+    X_tsne = tsne.fit_transform(X)
+
+    for x, y in zip(X_tsne, y):
+        plt.scatter(x[0], x[1], alpha=0.5, color=color_list[y])
+    plt.axis('off')
+    plt.show()
 
 def evaluate(feats, n_way, n_support, n_query):
     class_list = feats.keys()
@@ -88,7 +120,7 @@ if __name__ == '__main__':
     val_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
     val_loader = val_datamgr.get_data_loader(val_file, aug=False)
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     for i in range(int(num_epochs / 100)):
         num_model = 100 * (i + 1)
@@ -96,7 +128,7 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        # save_file = './AF_miniimagenet_450.pth'
+        # save_file = './Ours_miniimagenet_790_Conv128.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
@@ -114,13 +146,15 @@ if __name__ == '__main__':
         model = model.to(device)
         if torch.cuda.device_count() > 1:
             os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+            os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
             model = nn.DataParallel(model)
         model.load_state_dict(torch.load(save_file))
 
         with torch.no_grad():
             print('Feature extracting...')
             feats = feature_extract(val_loader, model)
+
+            # tsne(feats, 600)
 
             print('Evaluating...')
             acc_all = []

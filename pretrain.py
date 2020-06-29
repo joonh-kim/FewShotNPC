@@ -59,14 +59,15 @@ if __name__ == '__main__':
     model = model.to(device)
     if torch.cuda.device_count() > 1:
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
         model = nn.DataParallel(model)
     CE_loss = nn.CrossEntropyLoss()
 
-    optimizer = optim.Adam([
-        {'params': model.feature_extractor.parameters()},
-        {'params': model.classifier.parameters(), 'lr': 1e-3}
-    ], lr=1e-3)
+    # optimizer = optim.Adam([
+    #     {'params': model.feature_extractor.parameters()},
+    #     {'params': model.classifier.parameters(), 'lr': 1e-3}
+    # ], lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     for epoch in range(num_epochs):
         running_loss = 0.0
