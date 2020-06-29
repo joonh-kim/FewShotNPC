@@ -44,8 +44,6 @@ if __name__ == '__main__':
             model = model_cc()
         model = model.to(device)
         if torch.cuda.device_count() > 1:
-            os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-            os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
             model = nn.DataParallel(model)
         model.load_state_dict(torch.load(save_file))
 
