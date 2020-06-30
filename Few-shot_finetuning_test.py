@@ -4,6 +4,7 @@ import os
 from arguments import parse_args
 from data.datamgr import SetDataManager
 from model.model import *
+from model.backbone import *
 from utils import *
 import numpy as np
 
@@ -12,9 +13,10 @@ def criterion(output1, output2, target, batch_size):
     s2 = Sigma2.apply
     alpha = 1/15
 
-    loss = (target * s1(output1) + alpha * (1 - target) * s2(output2)).sum()
+    loss = (target * s1(output1) + alpha * (1 - target) * s2(output2)).sum(dim=1)
+    loss = loss.sum() / batch_size
 
-    return loss / batch_size
+    return loss
 
 def parse_support_and_query(x, n_way, n_support, n_query):
     x_support = x[:, :n_support]
@@ -49,7 +51,7 @@ def evaluate(model, x_support, x_query, n_way, n_support):
     return acc
 
 if __name__ == '__main__':
-    model_num = 775
+    model_num = 300
 
     random_init = False
 
@@ -62,24 +64,28 @@ if __name__ == '__main__':
     else:
         loadfile = args.path + '/filelists/' + args.data_set + '/' + args.split + '.json'
     modelfile = os.path.join(checkpoint_dir, args.data_set + '_' + str(model_num) + ".pth")
+    # modelfile = './miniimagenet_300.pth'
 
-    image_size = 84
+    image_size = 224
 
     datamgr = SetDataManager(image_size, args.n_way, args.n_support, args.n_query, args.iteration)
     data_loader = datamgr.get_data_loader(loadfile, aug=False)
 
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     tmp = torch.load(modelfile)
     state_keys = list(tmp.keys())
     for i, key in enumerate(state_keys):
         if "feature_extractor." in key:
-            newkey = key.replace("feature_extractor.", "")
+            if "module" not in key:
+                newkey = key.replace("feature_extractor.", "")
+            else:
+                newkey = key.replace("module.feature_extractor.", "")
             tmp[newkey] = tmp.pop(key)
         else:
             tmp.pop(key)
 
-    backbone = ConvNet128()
+    backbone = ResNet18()
     backbone = backbone.to(device)
     backbone.load_state_dict(tmp)
 
@@ -89,29 +95,19 @@ if __name__ == '__main__':
         x_support = x_support.to(device)
         x_query = x_query.to(device)
 
-        if args.classifier == 'Ours':
-            y_support = one_hot_miniimagenet(np.repeat(range(args.n_way), args.n_support), args.n_way)
-            y_support = y_support.to(device)
-        elif args.classifier in ['Cosine', 'ArcFace']:
-            y_support = np.repeat(range(args.n_way), args.n_support)
-            y_support = torch.tensor(y_support).to(device)
+        y_support = np.repeat(range(args.n_way), args.n_support)
+        y_support = torch.tensor(y_support).to(device)
 
         support_feat = backbone(x_support)
         support_feat = support_feat.contiguous().view(args.n_way, args.n_support, -1)
         centers = torch.mean(support_feat, dim=1)
 
-        if args.classifier == 'Ours':
-            model = finetuning_model(tmp, random_init, centers)
-        elif args.classifier in ["Cosine", "ArcFace"]:
-            model = finetuning_model_cc(tmp, random_init, centers)
+        model = finetuning_model_cc(tmp, random_init, centers)
         model.to(device)
 
         if args.adaptation_step == 0:
             with torch.no_grad():
-                if args.classifier == 'Ours':
-                    score, _, _ = model(x_query)
-                elif args.classifier in ['Cosine', 'ArcFace']:
-                    score = model(x_query)
+                score = model(x_query)
                 pred = score.data.cpu().numpy().argmax(axis=1)
                 y_query = np.repeat(range(args.n_way), args.n_query)
                 acc = np.mean(pred == y_query) * 100
@@ -121,15 +117,15 @@ if __name__ == '__main__':
                 print('Iteration {:d}/{:d}'.format(i + 1, len(data_loader)))
 
         else:
-            optimizer = optim.Adam(model.parameters(), lr=args.adaptation_lr)  #lr=0.0006
+            optimizer = optim.Adam(model.parameters(), lr=args.adaptation_lr)  #lr=0.0005
             CE_loss = nn.CrossEntropyLoss()
 
             for j in range(args.adaptation_step):
                 optimizer.zero_grad()
                 if args.classifier == 'Ours':
-                    output1, output2, _ = model(x_support)
-                    loss = criterion(output1, output2, y_support, args.n_way * args.n_support)
-                elif args.classifier in ['Cosine', 'ArcFace']:
+                    output = model(x_support)
+
+                elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
                     output = model(x_support)
                     if args.classifier == 'ArcFace':
                         y_one_hot = one_hot_miniimagenet(y_support, args.n_way).type(torch.cuda.FloatTensor)
@@ -137,15 +133,17 @@ if __name__ == '__main__':
                             torch.cos(torch.acos(torch.mul(output / args.scale_factor, y_one_hot)) + args.margin),
                             y_one_hot)
                         output = args.scale_factor * (output_target + torch.mul(output / args.scale_factor, 1 - y_one_hot))
-                    loss = CE_loss(output, y_support)
+                    if args.classifier == 'CosFace':
+                        y_one_hot = one_hot_miniimagenet(y_support, args.n_way).type(torch.cuda.FloatTensor)
+                        output_target = torch.mul(output / args.scale_factor, y_one_hot) - args.margin
+                        output = args.scale_factor * (
+                                    output_target + torch.mul(output / args.scale_factor, 1 - y_one_hot))
+                loss = CE_loss(output, y_support)
                 loss.backward()
                 optimizer.step()
 
                 with torch.no_grad():
-                    if args.classifier == 'Ours':
-                        score, _, _ = model(x_query)
-                    elif args.classifier in ['Cosine', 'ArcFace']:
-                        score = model(x_query)
+                    score = model(x_query)
                     pred = score.data.cpu().numpy().argmax(axis=1)
                     y_query = np.repeat(range(args.n_way), args.n_query)
                     acc = np.mean(pred == y_query) * 100

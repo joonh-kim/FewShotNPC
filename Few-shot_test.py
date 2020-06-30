@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
     if args.num_epochs == -1:
         if args.data_set == 'miniimagenet':
-            num_epochs = 800
+            num_epochs = 1000
         else:
             num_epochs = 5000
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        # save_file = './CC_miniimagenet_400_Conv128.pth'
+        # save_file = './ep90_miniimagenet_400_Resnet18.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
@@ -140,7 +140,7 @@ if __name__ == '__main__':
                 model = model18()
             else:
                 raise NotImplementedError
-        elif args.classifier in ['Cosine', 'ArcFace']:
+        elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
             model = model_cc()
         model = model.to(device)
         loaded_params = torch.load(save_file)

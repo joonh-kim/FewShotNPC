@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    for j in range(4):
+    for j in range(10):
         num_model = 100 * (j+1)
 
         # num_model = 400  # which checkpoint file?
@@ -21,14 +21,14 @@ if __name__ == '__main__':
 
         image_size = 224
 
-        base_datamgr = SimpleDataManager(image_size, batch_size=32)
+        base_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
         base_loader = base_datamgr.get_data_loader(base_file, aug=True)
 
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        save_file = './miniimagenet_1.pth'
+        # save_file = './miniimagenet_1.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
@@ -41,7 +41,7 @@ if __name__ == '__main__':
                 model = model18()
             else:
                 raise NotImplementedError
-        elif args.classifier in ['Cosine', 'ArcFace']:
+        elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
             model = model_cc()
         model = model.to(device)
         loaded_params = torch.load(save_file)
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
                 if args.classifier == 'Ours':
                     _, outputs, _ = model(x)
-                elif args.classifier in ['Cosine', 'ArcFace']:
+                elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
                     outputs = model(x)
 
                 _, predicted = torch.max(outputs, 1)

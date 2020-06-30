@@ -8,6 +8,7 @@ results/
 .idea/
 .tgz/
 filelists/
+Confidence_calibration.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

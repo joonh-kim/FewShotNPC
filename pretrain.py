@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     if args.num_epochs == -1:
         if args.data_set == 'miniimagenet':
-            num_epochs = 800
+            num_epochs = 400
         else:
             num_epochs = 5000
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             model = model18()
         else:
             raise NotImplementedError
-    elif args.classifier in ['Cosine', 'ArcFace']:
+    elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
         model = model_cc()
 
     model = model.to(device)
@@ -61,10 +61,6 @@ if __name__ == '__main__':
         model = nn.DataParallel(model)
     CE_loss = nn.CrossEntropyLoss()
 
-    # optimizer = optim.Adam([
-    #     {'params': model.feature_extractor.parameters()},
-    #     {'params': model.classifier.parameters(), 'lr': 1e-3}
-    # ], lr=1e-3)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     for epoch in range(num_epochs):
@@ -83,13 +79,17 @@ if __name__ == '__main__':
             if args.classifier == 'Ours':
                 output1, output2, _ = model(x)
                 loss = criterion(output1, output2, y, args.base_batch_size)
-            elif args.classifier in ['Cosine', 'ArcFace']:
+            elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
                 output = model(x)
                 if args.classifier == 'ArcFace':
                     y_one_hot = one_hot_miniimagenet(y, args.num_class).type(torch.cuda.FloatTensor)
                     output_target = torch.mul(torch.cos(torch.acos(torch.mul(output/args.scale_factor, y_one_hot)) + args.margin), y_one_hot)
                     output = args.scale_factor * (output_target + torch.mul(output/args.scale_factor, 1-y_one_hot))
-                loss = CE_loss(output, y)
+                if args.classifier == 'CosFace':
+                    y_one_hot = one_hot_miniimagenet(y, args.num_class).type(torch.cuda.FloatTensor)
+                    output_target = torch.mul(output / args.scale_factor, y_one_hot) - args.margin
+                    output = args.scale_factor * (output_target + torch.mul(output/args.scale_factor, 1-y_one_hot))
+            loss = CE_loss(output, y)
 
             loss.backward()
             optimizer.step()
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
                 if args.classifier == 'Ours':
                     _, outputs, _ = model(x)
-                elif args.classifier in ['Cosine', 'ArcFace']:
+                elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
                     outputs = model(x)
 
                 _, predicted = torch.max(outputs, 1)

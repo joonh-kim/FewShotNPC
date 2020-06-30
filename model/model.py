@@ -217,7 +217,8 @@ class finetuning_cos_softmax(nn.Module):
 class finetuning_model_cc(nn.Module):
     def __init__(self, tmp, random_init, weights):
         super(finetuning_model_cc, self).__init__()
-        self.feature_extractor = ConvNet128()
+        # self.feature_extractor = ConvNet128()
+        self.feature_extractor = ResNet18()
         with torch.no_grad():
             self.feature_extractor.load_state_dict(tmp)
         self.classifier = finetuning_cos_softmax(args.feature_dim, args.n_way, random_init, weights)
