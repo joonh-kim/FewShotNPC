@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    for j in range(10):
+    for j in range(4):
         num_model = 100 * (j+1)
 
         # num_model = 400  # which checkpoint file?

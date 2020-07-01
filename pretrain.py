@@ -111,6 +111,22 @@ if __name__ == '__main__':
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
 
+        if args.classifier == 'Ours':
+            if args.backbone == 'Conv64':
+                model = model64()
+            elif args.backbone == 'Conv128':
+                model = model128()
+            elif args.backbone == 'ResNet12':
+                model = model12()
+            elif args.backbone == 'ResNet18':
+                model = model18()
+            else:
+                raise NotImplementedError
+        elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+            model = model_cc()
+
+        model = model.to(device)
+
         loaded_params = torch.load(save_file)
         new_params = model.state_dict().copy()
         for i in loaded_params:
@@ -120,6 +136,9 @@ if __name__ == '__main__':
             else:
                 new_params[i] = loaded_params[i]
         model.load_state_dict(new_params)
+
+        if torch.cuda.device_count() > 1:
+            model = nn.DataParallel(model)
 
         correct = 0.0
         with torch.no_grad():

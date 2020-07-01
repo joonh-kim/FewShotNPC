@@ -51,7 +51,7 @@ def evaluate(model, x_support, x_query, n_way, n_support):
     return acc
 
 if __name__ == '__main__':
-    model_num = 300
+    model_num = 600
 
     random_init = False
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     else:
         loadfile = args.path + '/filelists/' + args.data_set + '/' + args.split + '.json'
     modelfile = os.path.join(checkpoint_dir, args.data_set + '_' + str(model_num) + ".pth")
-    # modelfile = './miniimagenet_300.pth'
+    modelfile = './best_models/CE_miniimagenet_ResNet18_best_model.pth'
 
     image_size = 224
 

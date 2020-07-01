@@ -33,7 +33,8 @@ class cos_softmax(nn.Module):
 class model_cc(nn.Module):
     def __init__(self):
         super(model_cc, self).__init__()
-        self.feature_extractor = ConvNet128()
+        # self.feature_extractor = ConvNet128()
+        self.feature_extractor = ResNet18()
         self.classifier = cos_softmax(args.feature_dim, args.num_class)
 
     def forward(self, x):

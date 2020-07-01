@@ -28,18 +28,23 @@ def feature_extract(val_loader, model):
     return feats
 
 def tsne(feats, n):
-    color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
-                  5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'chartreuse', 9: 'forestgreen',
-                  10: 'aquamarine', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
-                  15: 'teal', 16: 'navy', 17: 'indigo', 18: 'crimson', 19: 'black'}
+    # color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
+    #               5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'chartreuse', 9: 'forestgreen',
+    #               10: 'aquamarine', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
+    #               15: 'teal', 16: 'navy', 17: 'indigo', 18: 'crimson', 19: 'black'}
 
-    feats_np = np.zeros((20, n, 3200))
+    color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
+                  5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'black', 9: 'forestgreen',
+                  10: 'crimson', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
+                  15: 'teal'}
+
+    feats_np = np.zeros((64, n, 512))
     class_list = feats.keys()
     for cl in class_list:
         for i in range(n):
-            feats_np[cl - 80][i] = feats[cl][i]
-    X = feats_np.reshape(20 * n, 3200)
-    y = np.repeat(range(20), n)
+            feats_np[cl][i] = feats[cl][i]
+    X = feats_np.reshape(64 * n, 512)
+    y = np.repeat(range(64), n)
 
     print(X.shape)
     print(y.shape)
@@ -110,7 +115,7 @@ if __name__ == '__main__':
 
     if args.num_epochs == -1:
         if args.data_set == 'miniimagenet':
-            num_epochs = 1000
+            num_epochs = 400
         else:
             num_epochs = 5000
 
@@ -123,11 +128,11 @@ if __name__ == '__main__':
 
     for i in range(int(num_epochs / 100)):
         num_model = 100 * (i + 1)
-        # num_model = 50
+        # num_model = 1000
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        # save_file = './ep90_miniimagenet_400_Resnet18.pth'
+        save_file = './best_models/NPC_miniimagenet_ResNet18_best_model.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':
