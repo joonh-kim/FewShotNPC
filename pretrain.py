@@ -31,11 +31,23 @@ if __name__ == '__main__':
 
     if args.num_epochs == -1:
         if args.data_set == 'miniimagenet':
-            num_epochs = 400
-        else:
+            if args.bacbone == 'ResNet18':
+                num_epochs = 400
+            elif args.bacbone == 'Conv128':
+                num_epochs = 800
+            else:
+                raise NotImplementedError("Unavailable backbone architecture")
+        elif args.data_set == 'CUB':
             num_epochs = 5000
+        else:
+            raise NotImplementedError("Unavailable dataset")
 
-    image_size = 224
+    if args.backbone == 'ResNet18':
+        image_size = 224
+    elif args.bacbone == 'Conv128':
+        image_size = 84
+    else:
+        raise NotImplementedError("Unavailable backbone architecture")
 
     base_datamgr = SimpleDataManager(image_size, batch_size=args.base_batch_size)
     base_loader = base_datamgr.get_data_loader(base_file, aug=True)
@@ -43,17 +55,13 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.classifier == 'Ours':
-        if args.backbone == 'Conv64':
-            model = model64()
-        elif args.backbone == 'Conv128':
+        if args.backbone == 'Conv128':
             model = model128()
-        elif args.backbone == 'ResNet12':
-            model = model12()
         elif args.backbone == 'ResNet18':
             model = model18()
         else:
-            raise NotImplementedError
-    elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+            raise NotImplementedError("Unavailable backbone architecture")
+    elif args.classifier in ['CC', 'AF', 'CF']:
         model = model_cc()
 
     model = model.to(device)
@@ -67,7 +75,7 @@ if __name__ == '__main__':
         running_loss = 0.0
         for i, (x, y) in enumerate(base_loader):
             x = x.to(device)
-            if args.classifier == 'Ours':
+            if args.classifier == 'NPC':
                 if args.data_set == 'miniimagenet':
                     y = one_hot_miniimagenet(y, args.num_class).type(torch.cuda.FloatTensor)
                 else:
@@ -76,20 +84,21 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
 
-            if args.classifier == 'Ours':
+            if args.classifier == 'NPC':
                 output1, output2, _ = model(x)
                 loss = criterion(output1, output2, y, args.base_batch_size)
-            elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+            elif args.classifier in ['CC', 'AF', 'CF']:
                 output = model(x)
-                if args.classifier == 'ArcFace':
+                if args.classifier == 'AF':
                     y_one_hot = one_hot_miniimagenet(y, args.num_class).type(torch.cuda.FloatTensor)
-                    output_target = torch.mul(torch.cos(torch.acos(torch.mul(output/args.scale_factor, y_one_hot)) + args.margin), y_one_hot)
+                    output_target = torch.mul(torch.cos(torch.acos(torch.mul(output/args.scale_factor, y_one_hot))
+                                                        + args.margin), y_one_hot)
                     output = args.scale_factor * (output_target + torch.mul(output/args.scale_factor, 1-y_one_hot))
-                if args.classifier == 'CosFace':
+                if args.classifier == 'CF':
                     y_one_hot = one_hot_miniimagenet(y, args.num_class).type(torch.cuda.FloatTensor)
                     output_target = torch.mul(output / args.scale_factor, y_one_hot) - args.margin
                     output = args.scale_factor * (output_target + torch.mul(output/args.scale_factor, 1-y_one_hot))
-            loss = CE_loss(output, y)
+                loss = CE_loss(output, y)
 
             loss.backward()
             optimizer.step()
@@ -101,7 +110,7 @@ if __name__ == '__main__':
                 running_loss = 0.0
 
         if epoch == 0 or epoch % 100 == 99:
-            save_file = checkpoint_dir + '/' + args.data_set + '_' + str(epoch + 1) + '.pth'
+            save_file = os.path.join(checkpoint_dir, args.data_set + '_' + str(epoch + 1) + '.pth')
             torch.save(model.state_dict(), save_file)
 
     """ Test accuracy evaluation """
@@ -109,20 +118,16 @@ if __name__ == '__main__':
         num_model = 100 * (j + 1)
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
-        save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
+        save_file = os.path.join(checkpoint_dir, args.data_set + '_' + str(num_model) + '.pth')
 
-        if args.classifier == 'Ours':
-            if args.backbone == 'Conv64':
-                model = model64()
-            elif args.backbone == 'Conv128':
+        if args.classifier == 'NPC':
+            if args.backbone == 'Conv128':
                 model = model128()
-            elif args.backbone == 'ResNet12':
-                model = model12()
             elif args.backbone == 'ResNet18':
                 model = model18()
             else:
                 raise NotImplementedError
-        elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+        elif args.classifier in ['CC', 'AF', 'CF']:
             model = model_cc()
 
         model = model.to(device)
@@ -146,9 +151,9 @@ if __name__ == '__main__':
                 x = x.to(device)
                 y = y.to(device)
 
-                if args.classifier == 'Ours':
+                if args.classifier == 'NPC':
                     _, outputs, _ = model(x)
-                elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+                elif args.classifier in ['CC', 'AF', 'CF']:
                     outputs = model(x)
 
                 _, predicted = torch.max(outputs, 1)

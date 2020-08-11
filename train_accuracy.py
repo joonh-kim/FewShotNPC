@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    for j in range(4):
+    for j in range(1):
         num_model = 100 * (j+1)
 
         # num_model = 400  # which checkpoint file?
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        # save_file = './miniimagenet_1.pth'
+        save_file = './checkpoint/miniimagenet/Rebuttal/ResNet18_ep110_batch128_multigpu/miniimagenet_400.pth'
 
         if args.classifier == 'Ours':
             if args.backbone == 'Conv64':

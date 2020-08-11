@@ -64,9 +64,14 @@ if __name__ == '__main__':
     else:
         loadfile = args.path + '/filelists/' + args.data_set + '/' + args.split + '.json'
     modelfile = os.path.join(checkpoint_dir, args.data_set + '_' + str(model_num) + ".pth")
-    modelfile = './best_models/CE_miniimagenet_ResNet18_best_model.pth'
+    # modelfile = './checkpoint/miniimagenet/Rebuttal/ResNet18_ep110_batch128_multigpu/miniimagenet_400.pth'
 
-    image_size = 224
+    if args.backbone == 'ResNet18':
+        image_size = 224
+    elif args.bacbone == 'Conv128':
+        image_size = 84
+    else:
+        raise NotImplementedError("Unavailable backbone architecture")
 
     datamgr = SetDataManager(image_size, args.n_way, args.n_support, args.n_query, args.iteration)
     data_loader = datamgr.get_data_loader(loadfile, aug=False)
@@ -85,7 +90,12 @@ if __name__ == '__main__':
         else:
             tmp.pop(key)
 
-    backbone = ResNet18()
+    if args.backbone == 'Conv128':
+        backbone = ConvNet128()
+    elif args.backbone == 'ResNet18':
+        backbone = ResNet18()
+    else:
+        raise NotImplementedError("Unavailable backbone architecture")
     backbone = backbone.to(device)
     backbone.load_state_dict(tmp)
 
@@ -122,18 +132,18 @@ if __name__ == '__main__':
 
             for j in range(args.adaptation_step):
                 optimizer.zero_grad()
-                if args.classifier == 'Ours':
+                if args.classifier == 'NPC':
                     output = model(x_support)
 
-                elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+                elif args.classifier in ['CC', 'AF', 'CF']:
                     output = model(x_support)
-                    if args.classifier == 'ArcFace':
+                    if args.classifier == 'AF':
                         y_one_hot = one_hot_miniimagenet(y_support, args.n_way).type(torch.cuda.FloatTensor)
                         output_target = torch.mul(
                             torch.cos(torch.acos(torch.mul(output / args.scale_factor, y_one_hot)) + args.margin),
                             y_one_hot)
                         output = args.scale_factor * (output_target + torch.mul(output / args.scale_factor, 1 - y_one_hot))
-                    if args.classifier == 'CosFace':
+                    if args.classifier == 'CF':
                         y_one_hot = one_hot_miniimagenet(y_support, args.n_way).type(torch.cuda.FloatTensor)
                         output_target = torch.mul(output / args.scale_factor, y_one_hot) - args.margin
                         output = args.scale_factor * (

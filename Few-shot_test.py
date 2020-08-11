@@ -28,23 +28,24 @@ def feature_extract(val_loader, model):
     return feats
 
 def tsne(feats, n):
-    # color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
-    #               5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'chartreuse', 9: 'forestgreen',
-    #               10: 'aquamarine', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
-    #               15: 'teal', 16: 'navy', 17: 'indigo', 18: 'crimson', 19: 'black'}
-
     color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
-                  5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'black', 9: 'forestgreen',
-                  10: 'crimson', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
-                  15: 'teal'}
+                  5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'chartreuse', 9: 'forestgreen',
+                  10: 'aquamarine', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
+                  15: 'teal', 16: 'navy', 17: 'indigo', 18: 'crimson', 19: 'black'}
 
-    feats_np = np.zeros((64, n, 512))
+    # color_list = {0: 'gray', 1: 'darkgoldenrod', 2: 'orangered', 3: 'chocolate', 4: 'dodgerblue',
+    #               5: 'magenta', 6: 'blue', 7: 'saddlebrown', 8: 'black', 9: 'forestgreen',
+    #               10: 'crimson', 11: 'gold', 12: 'cyan', 13: 'red', 14: 'olive',
+    #               15: 'teal'}
+
+    feats_np = np.zeros((16, n, 512))
     class_list = feats.keys()
     for cl in class_list:
         for i in range(n):
-            feats_np[cl][i] = feats[cl][i]
-    X = feats_np.reshape(64 * n, 512)
-    y = np.repeat(range(64), n)
+            feats_np[cl - 64][i] = feats[cl][i]
+    # feats_np = feats_np / np.linalg.norm(feats_np, ord=2, axis=1, keepdims=True)
+    X = feats_np.reshape(16 * n, 512)
+    y = np.repeat(range(16), n)
 
     print(X.shape)
     print(y.shape)
@@ -115,11 +116,23 @@ if __name__ == '__main__':
 
     if args.num_epochs == -1:
         if args.data_set == 'miniimagenet':
-            num_epochs = 400
-        else:
+            if args.bacbone == 'ResNet18':
+                num_epochs = 400
+            elif args.bacbone == 'Conv128':
+                num_epochs = 800
+            else:
+                raise NotImplementedError("Unavailable backbone architecture")
+        elif args.data_set == 'CUB':
             num_epochs = 5000
+        else:
+            raise NotImplementedError("Unavailable dataset")
 
-    image_size = 224
+    if args.backbone == 'ResNet18':
+        image_size = 224
+    elif args.bacbone == 'Conv128':
+        image_size = 84
+    else:
+        raise NotImplementedError("Unavailable backbone architecture")
 
     val_datamgr = SimpleDataManager(image_size, batch_size=args.val_batch_size)
     val_loader = val_datamgr.get_data_loader(val_file, aug=False)
@@ -132,21 +145,18 @@ if __name__ == '__main__':
 
         checkpoint_dir = args.path + '/checkpoint/' + args.data_set
         save_file = checkpoint_dir + '/' + args.data_set + '_' + str(num_model) + '.pth'
-        save_file = './best_models/NPC_miniimagenet_ResNet18_best_model.pth'
+        # save_file = './checkpoint/miniimagenet/Rebuttal/ResNet18_ep110_batch128_multigpu/miniimagenet_400.pth'
 
         if args.classifier == 'Ours':
-            if args.backbone == 'Conv64':
-                model = model64()
-            elif args.backbone == 'Conv128':
+            if args.backbone == 'Conv128':
                 model = model128()
-            elif args.backbone == 'ResNet12':
-                model = model12()
             elif args.backbone == 'ResNet18':
                 model = model18()
             else:
-                raise NotImplementedError
-        elif args.classifier in ['Cosine', 'ArcFace', 'CosFace']:
+                raise NotImplementedError("Unavailable backbone architecture")
+        elif args.classifier in ['CC', 'AF', 'CF']:
             model = model_cc()
+
         model = model.to(device)
         loaded_params = torch.load(save_file)
         new_params = model.state_dict().copy()

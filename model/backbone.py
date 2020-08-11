@@ -352,9 +352,9 @@ class ResNet(nn.Module):
 
         self.trunk = nn.Sequential(*trunk)
 
-    def forward(self,x):
+    def forward(self, x):
         out = self.trunk(x)
         return out
 
 def ResNet18( flatten = True):
-    return ResNet(SimpleBlock, [2,2,2,2],[64,128,256,512], flatten)
+    return ResNet(SimpleBlock, [2, 2, 2, 2], [64, 128, 256, 512], flatten)
